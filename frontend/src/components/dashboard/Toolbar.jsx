@@ -3,14 +3,17 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { api, errMsg } from "@/lib/api";
 
-const download = async (format) => {
+import { ClassExportMenu } from "./ClassExportMenu";
+
+const download = async (format, class_name) => {
   try {
-    const r = await api.get("/admin/export", { params: { format }, responseType: "blob" });
+    const r = await api.get("/admin/export", { params: { format, ...(class_name && { class_name }) }, responseType: "blob" });
     const name = (r.headers["content-disposition"] || "").match(/filename="(.+)"/)?.[1] || `rekap.${format}`;
     const url = URL.createObjectURL(r.data);
     const a = Object.assign(document.createElement("a"), { href: url, download: name });
     a.click();
     URL.revokeObjectURL(url);
+    toast.success(class_name ? `Rekap Kelas ${class_name} diunduh` : "Rekap semua kelas diunduh");
   } catch (e) { toast.error(errMsg(e, "Ekspor gagal")); }
 };
 
@@ -31,6 +34,7 @@ export const Toolbar = ({ resultsPublic, setResultsPublic, selected, onBulk }) =
           <Btn testId="button-bulk-unpublish" onClick={() => onBulk(false)}><EyeOff className="h-4 w-4" /> Jadikan draft</Btn>
         </>
       )}
+      <ClassExportMenu onExport={download} />
       <Btn testId="button-export-csv" onClick={() => download("csv")}><FileText className="h-4 w-4" /> Export CSV</Btn>
       <Btn testId="button-export-excel" dark onClick={() => download("xlsx")}><FileSpreadsheet className="h-4 w-4" /> Export Excel</Btn>
     </div>

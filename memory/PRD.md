@@ -23,3 +23,6 @@ User choices: guru bisa mengatur apakah halaman nilai siswa ditampilkan; AI otom
 ## Backlog
 - P1: Show AI data-confidence filter; per-class export button.
 - P2: Split server.py into routers; email notification to teacher on new submission.
+
+## Update (Juni 2026)
+- Rekap Per Kelas: tombol di Toolbar dashboard (ClassExportMenu.jsx) -> pilih kelas -> unduh CSV/Excel satu kelas. Backend `GET /api/admin/export?class_name=XI N` menamai file `rekap_nilai_seni_musik_kelas_XI_N_<tgl>` dan Excel hanya berisi 1 sheet kelas tsb. Diverifikasi via curl + screenshot.

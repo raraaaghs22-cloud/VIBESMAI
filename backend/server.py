@@ -491,6 +491,7 @@ async def export(format: str = Query("csv", pattern="^(csv|xlsx)$"), class_name:
              for _, k in EXPORT_COLS] for s in subs]
     headers = [h for h, _ in EXPORT_COLS]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+    suffix = f"_kelas_{class_name.replace(' ', '_')}" if class_name else ""
     if format == "csv":
         buf = io.StringIO()
         buf.write("\ufeff")
@@ -498,12 +499,15 @@ async def export(format: str = Query("csv", pattern="^(csv|xlsx)$"), class_name:
         w.writerow(headers)
         w.writerows(rows)
         return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
-                        headers={"Content-Disposition": f'attachment; filename="rekap_nilai_seni_musik_{stamp}.csv"'})
+                        headers={"Content-Disposition": f'attachment; filename="rekap_nilai_seni_musik{suffix}_{stamp}.csv"'})
     wb = Workbook()
     wb.remove(wb.active)
-    groups = [("Semua Kelas", subs)] + [(c, [s for s in subs if s["class_name"] == c]) for c in CLASSES]
+    if class_name:
+        groups = [(f"Kelas {class_name}", subs)]
+    else:
+        groups = [("Semua Kelas", subs)] + [(c, [s for s in subs if s["class_name"] == c]) for c in CLASSES]
     for title, items in groups:
-        if title != "Semua Kelas" and not items:
+        if title not in ("Semua Kelas", f"Kelas {class_name}") and not items:
             continue
         ws = wb.create_sheet(title)
         ws.append(headers)
@@ -518,7 +522,7 @@ async def export(format: str = Query("csv", pattern="^(csv|xlsx)$"), class_name:
     wb.save(out)
     out.seek(0)
     return StreamingResponse(out, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                             headers={"Content-Disposition": f'attachment; filename="rekap_nilai_seni_musik_{stamp}.xlsx"'})
+                             headers={"Content-Disposition": f'attachment; filename="rekap_nilai_seni_musik{suffix}_{stamp}.xlsx"'})
 
 
 app.include_router(api)
