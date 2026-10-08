@@ -1,0 +1,38 @@
+.font-heading {
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.overline {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #b45309;
+  background: rgba(254, 243, 199, 0.8);
+  padding: 0.3rem 0.7rem;
+  border-radius: 9999px;
+}
+
+.fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grain {
+  background-image: radial-gradient(rgba(120, 53, 15, 0.05) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+::selection {
+  background: #fde68a;
+  color: #0f172a;
+}
