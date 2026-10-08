@@ -1,9 +1,9 @@
-import { Eye, ExternalLink } from "lucide-react";
+import { Eye, ExternalLink, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PlatformBadge, GradeBadge, StatusPill } from "@/components/Badges";
 import { fmtDate } from "@/lib/constants";
 
-const Row = ({ s, selected, toggle, onOpen }) => (
+const Row = ({ s, selected, toggle, onOpen, onDelete }) => (
   <tr data-testid={`row-submission-${s.id}`} className="border-t border-slate-100 transition-colors hover:bg-amber-50/40">
     <td className="px-4 py-3"><Checkbox data-testid={`checkbox-select-${s.id}`} checked={selected} onCheckedChange={() => toggle(s.id)} /></td>
     <td className="px-4 py-3 font-mono text-xs text-slate-500">{s.class_name}<span className="text-slate-300"> / </span>{String(s.attendance_number).padStart(2, "0")}</td>
@@ -24,14 +24,19 @@ const Row = ({ s, selected, toggle, onOpen }) => (
       {s.manually_edited && <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">edit</span>}
     </td>
     <td className="px-4 py-3 text-right">
-      <button data-testid={`button-review-ai-submission-${s.id}`} onClick={() => onOpen(s.id)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-700">
-        <Eye className="h-3.5 w-3.5" /> Tinjau
-      </button>
+      <div className="inline-flex items-center gap-1.5">
+        <button data-testid={`button-review-ai-submission-${s.id}`} onClick={() => onOpen(s.id)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-slate-700">
+          <Eye className="h-3.5 w-3.5" /> Tinjau
+        </button>
+        <button data-testid={`button-delete-submission-${s.id}`} onClick={() => onDelete(s)} title="Hapus" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-600 hover:text-white">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </td>
   </tr>
 );
 
-export const JournalTable = ({ rows, selected, setSelected, onOpen }) => {
+export const JournalTable = ({ rows, selected, setSelected, onOpen, onDelete }) => {
   const toggle = (id) => setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const allOn = rows.length > 0 && rows.every((r) => selected.includes(r.id));
   return (
@@ -47,11 +52,11 @@ export const JournalTable = ({ rows, selected, setSelected, onOpen }) => {
             <th className="px-4 py-3">Nilai</th>
             <th className="px-4 py-3">Grade</th>
             <th className="px-4 py-3">Publikasi</th>
-            <th className="px-4 py-3" />
+            <th className="px-4 py-3 text-right">Aksi</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((s) => <Row key={s.id} s={s} selected={selected.includes(s.id)} toggle={toggle} onOpen={onOpen} />)}
+          {rows.map((s) => <Row key={s.id} s={s} selected={selected.includes(s.id)} toggle={toggle} onOpen={onOpen} onDelete={onDelete} />)}
           {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-16 text-center text-slate-400" data-testid="text-journal-empty">Belum ada pengumpulan.</td></tr>}
         </tbody>
       </table>

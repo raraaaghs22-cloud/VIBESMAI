@@ -7,6 +7,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { Toolbar } from "@/components/dashboard/Toolbar";
 import { JournalTable } from "@/components/dashboard/JournalTable";
 import { ReviewSheet } from "@/components/dashboard/ReviewSheet";
+import { DeleteDialog } from "@/components/dashboard/DeleteDialog";
 
 const INIT = { q: "", class_name: "all", platform: "all", status: "all", published: "all" };
 
@@ -17,6 +18,7 @@ export default function Dashboard({ user }) {
   const [resultsPublic, setRP] = useState(false);
   const [selected, setSelected] = useState([]);
   const [openId, setOpenId] = useState(null);
+  const [delTarget, setDelTarget] = useState(null);
 
   const load = useCallback(async () => {
     const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v && v !== "all"));
@@ -46,6 +48,11 @@ export default function Dashboard({ user }) {
       load();
     } catch (e) { toast.error(errMsg(e)); }
   };
+  const onDeleted = (id) => {
+    setRows((p) => p.filter((r) => r.id !== id));
+    setSelected((p) => p.filter((x) => x !== id));
+    api.get("/admin/stats").then((r) => setStats(r.data));
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7]">
@@ -58,9 +65,10 @@ export default function Dashboard({ user }) {
         <StatsRow stats={stats} />
         <Toolbar resultsPublic={resultsPublic} setResultsPublic={toggleRP} selected={selected} onBulk={bulk} />
         <FilterBar filters={filters} setFilters={setFilters} />
-        <JournalTable rows={rows} selected={selected} setSelected={setSelected} onOpen={setOpenId} />
+        <JournalTable rows={rows} selected={selected} setSelected={setSelected} onOpen={setOpenId} onDelete={setDelTarget} />
       </main>
       <ReviewSheet id={openId} onClose={() => setOpenId(null)} onChanged={load} />
+      <DeleteDialog target={delTarget} onClose={() => setDelTarget(null)} onDeleted={onDeleted} />
     </div>
   );
 }

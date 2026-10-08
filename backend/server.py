@@ -476,7 +476,9 @@ async def regrade(sub_id: str, bg: BackgroundTasks, _: dict = Depends(require_ad
 
 @api.delete("/admin/submissions/{sub_id}")
 async def delete_submission(sub_id: str, _: dict = Depends(require_admin)):
-    await db.submissions.delete_one({"id": sub_id})
+    res = await db.submissions.delete_one({"id": sub_id})
+    if not res.deleted_count:
+        raise HTTPException(404, "Not found")
     return {"ok": True}
 
 

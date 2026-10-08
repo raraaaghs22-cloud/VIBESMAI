@@ -31,3 +31,6 @@ User choices: guru bisa mengatur apakah halaman nilai siswa ditampilkan; AI otom
 - System prompt Gemini diganti sesuai spesifikasi guru (peran objektif, rubrik caption-based 50/30/20, skala huruf A>90/B80-89/C70-79/D<70).
 - Fallback: jika metadata kosong/diblokir (has_readable_text False) atau AI mengembalikan unreadable=true -> skor 0, grade N/A, strengths "-", weaknesses pesan privasi. Tidak memanggil AI jika metadata tidak terbaca.
 - UI: badge grade N/A (abu-abu). Diverifikasi E2E via curl (YouTube publik -> dinilai; IG privat -> N/A).
+
+## Update (Juni 2026) — Hapus Data
+- Kolom Aksi di tabel dashboard: tombol hapus (ikon tempat sampah merah) di samping Tinjau -> AlertDialog konfirmasi (Batal / Ya, Hapus) -> DELETE /api/admin/submissions/{id} (404 jika tidak ada) -> toast "Data berhasil dihapus", baris dihapus dari state tanpa reload, stats di-refresh. File: DeleteDialog.jsx, JournalTable.jsx, Dashboard.jsx. Diverifikasi via Playwright.
