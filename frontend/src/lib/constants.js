@@ -29,6 +29,7 @@ export const GRADE_CLS = {
   B: "bg-sky-50 text-sky-700 border-sky-200",
   C: "bg-amber-50 text-amber-800 border-amber-200",
   D: "bg-rose-50 text-rose-700 border-rose-200",
+  "N/A": "bg-slate-100 text-slate-500 border-slate-200",
 };
 
 export const STATUS = {

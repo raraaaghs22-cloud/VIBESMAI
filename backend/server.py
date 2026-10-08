@@ -45,10 +45,12 @@ PLATFORM_PATTERNS = {
 ASSIGNMENT = """Judul tugas: "Creative Video Project: Musik di Sekitar Kita"
 Ketentuan: Durasi 60-90 detik, format vertikal 9:16, menjelaskan fungsi musik dengan contoh dunia nyata, dan dilengkapi subtitle.
 Wajib memakai hashtag #FungsiMusik dan tag @Mr. Ocha."""
-RUBRIC = """Rubrik & bobot:
-1. Content & Context (50%): keakuratan penjelasan fungsi musik dan keberadaan contoh nyata (audio/visual/pertunjukan).
-2. Delivery & Subtitles (30%): penyampaian komunikatif, kejelasan, adanya teks/subtitle di layar.
-3. Technical & Tagging (20%): orientasi vertikal, kesesuaian durasi (60-90 detik), hashtag #FungsiMusik, tag @Mr. Ocha."""
+RUBRIC = """Rubrik penilaian (skala 0-100 per aspek):
+1. Content & Context (Bobot 50%): Apakah deskripsi video menunjukkan pemahaman yang akurat tentang fungsi musik di dunia nyata?
+2. Delivery & Subtitles (Bobot 30%): Apakah gaya bahasa di caption komunikatif, jelas, dan menyiratkan adanya penyampaian visual/teks yang baik?
+3. Technical & Tagging (Bobot 20%): Apakah terdapat hashtag #FungsiMusik dan mention @Mr. Ocha di dalam teks/caption?"""
+UNREADABLE_MSG = ("Sistem tidak dapat membaca deskripsi/konten video ini karena pembatasan privasi platform. "
+                  "Silakan klik tautan untuk menonton dan menilai video ini secara manual.")
 
 
 def now_iso():
@@ -67,13 +69,23 @@ def detect_platform(url: str) -> Optional[str]:
 
 
 def letter_grade(score: float) -> str:
-    if score >= 85:
+    if score > 90:
         return "A"
-    if score >= 70:
+    if score >= 80:
         return "B"
-    if score >= 55:
+    if score >= 70:
         return "C"
     return "D"
+
+
+def has_readable_text(meta: dict) -> bool:
+    texts = [meta.get("oembed", {}).get("title", "")]
+    texts += [str(v) for k, v in meta.get("page", {}).items() if k in ("title", "description", "full_description", "keywords")]
+    blob = " ".join(t for t in texts if t).strip()
+    if len(blob) < 15:
+        return False
+    return not re.search(r"access denied|forbidden|\b40[134]\b|login|log in|masuk|not available|tidak tersedia|private|sorry|unavailable",
+                         blob, re.I)
 
 
 def weighted(content: float, delivery: float, technical: float) -> float:
@@ -271,16 +283,25 @@ async def fetch_metadata(url: str, platform: str) -> dict:
 
 
 # ---------- AI grading ----------
-SYSTEM_PROMPT = f"""Anda adalah asisten penilai untuk Guru Seni Musik SMA (Mr. Ocha).
-Nilai tugas video siswa berdasarkan METADATA yang tersedia (judul, caption/deskripsi, hashtag, durasi, orientasi, konteks URL).
-Anda tidak dapat menonton video secara langsung; jika informasi tidak tersedia, berikan estimasi wajar yang konservatif dan sebutkan keterbatasan data.
+SYSTEM_PROMPT = f"""Kamu adalah Asisten Guru Seni Musik SMA yang sangat objektif dan teliti. Tugasmu adalah mengevaluasi metadata dari tautan video (Judul, Caption/Deskripsi, Hashtag, dan Teks yang tersedia) yang dikirimkan oleh siswa untuk tugas 'Creative Video Project: Musik di Sekitar Kita'.
 {ASSIGNMENT}
+
+ATURAN PENANGANAN ERROR: Sebelum menilai, periksa apakah data (metadata/caption) tersedia. JIKA data yang diterima kosong, atau berisi pesan error (seperti 'Access Denied', '403', dsb) karena video TikTok/IG/FB dikunci/diprivasi, MAKA JANGAN MENGARANG NILAI. Langsung keluarkan:
+{{"unreadable": true, "content_score": 0, "delivery_score": 0, "technical_score": 0, "strengths": "-", "weaknesses": "{UNREADABLE_MSG}"}}
+
 {RUBRIC}
-Balas HANYA dengan JSON valid (tanpa markdown) dengan kunci:
-"content_score" (0-100), "delivery_score" (0-100), "technical_score" (0-100),
-"strengths" (string, poin-poin kelebihan dalam Bahasa Indonesia, pisahkan dengan baris baru dan awali "- "),
-"weaknesses" (string, poin-poin kekurangan & saran perbaikan dalam Bahasa Indonesia, format sama),
+Nilai akhir = Content×0.5 + Delivery×0.3 + Technical×0.2. Letter Grade: A (>90), B (80-89), C (70-79), D (<70).
+
+FORMAT OUTPUT WAJIB: Balas HANYA dengan JSON valid (tanpa markdown) dengan kunci:
+"unreadable" (boolean), "content_score" (0-100), "delivery_score" (0-100), "technical_score" (0-100),
+"strengths" (string, 1-2 kalimat kelebihan berdasarkan teks yang dianalisis, Bahasa Indonesia),
+"weaknesses" (string, 1-2 kalimat saran perbaikan yang membangun, Bahasa Indonesia),
 "data_confidence" ("high" | "medium" | "low")."""
+
+
+def unreadable_result() -> dict:
+    return {"content_score": 0.0, "delivery_score": 0.0, "technical_score": 0.0, "final_score": 0.0, "grade": "N/A",
+            "strengths": "-", "weaknesses": UNREADABLE_MSG, "data_confidence": "none", "graded_at": now_iso()}
 
 
 def parse_json(text: str) -> dict:
@@ -296,18 +317,24 @@ async def grade_submission(sub_id: str):
     await db.submissions.update_one({"id": sub_id}, {"$set": {"status": "processing", "error": None}})
     try:
         meta = await fetch_metadata(sub["video_url"], sub["platform"])
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"grade-{sub_id}-{uuid.uuid4().hex[:6]}",
-                       system_message=SYSTEM_PROMPT).with_model("gemini", "gemini-3.1-pro-preview")
-        prompt = (f"Siswa: {sub['full_name']} (Kelas {sub['class_name']}, Absen {sub['attendance_number']})\n"
-                  f"Link video: {sub['video_url']}\nMetadata hasil inspeksi:\n{json.dumps(meta, ensure_ascii=False, indent=2)}")
-        reply = await chat.send_message(UserMessage(text=prompt))
-        res = parse_json(reply)
-        c, d, t = (max(0.0, min(100.0, float(res[k]))) for k in ("content_score", "delivery_score", "technical_score"))
-        score = weighted(c, d, t)
-        ai = {"content_score": c, "delivery_score": d, "technical_score": t, "final_score": score,
-              "grade": letter_grade(score), "strengths": res.get("strengths", ""),
-              "weaknesses": res.get("weaknesses", ""), "data_confidence": res.get("data_confidence", "low"),
-              "graded_at": now_iso()}
+        if not has_readable_text(meta):
+            ai = unreadable_result()
+        else:
+            chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"grade-{sub_id}-{uuid.uuid4().hex[:6]}",
+                           system_message=SYSTEM_PROMPT).with_model("gemini", "gemini-3.1-pro-preview")
+            prompt = (f"Siswa: {sub['full_name']} (Kelas {sub['class_name']}, Absen {sub['attendance_number']})\n"
+                      f"Link video: {sub['video_url']}\nMetadata hasil inspeksi:\n{json.dumps(meta, ensure_ascii=False, indent=2)}")
+            reply = await chat.send_message(UserMessage(text=prompt))
+            res = parse_json(reply)
+            if res.get("unreadable"):
+                ai = unreadable_result()
+            else:
+                c, d, t = (max(0.0, min(100.0, float(res[k]))) for k in ("content_score", "delivery_score", "technical_score"))
+                score = weighted(c, d, t)
+                ai = {"content_score": c, "delivery_score": d, "technical_score": t, "final_score": score,
+                      "grade": letter_grade(score), "strengths": res.get("strengths", ""),
+                      "weaknesses": res.get("weaknesses", ""), "data_confidence": res.get("data_confidence", "low"),
+                      "graded_at": now_iso()}
         await db.submissions.update_one({"id": sub_id}, {"$set": {
             "status": "graded", "metadata": meta, "ai": ai,
             **{k: ai[k] for k in ("content_score", "delivery_score", "technical_score", "final_score",

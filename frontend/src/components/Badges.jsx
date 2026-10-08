@@ -12,7 +12,7 @@ export const PlatformBadge = ({ platform, testId }) => {
 
 export const GradeBadge = ({ grade, testId }) =>
   grade ? (
-    <span data-testid={testId} className={`inline-flex h-7 w-7 items-center justify-center rounded-lg border font-mono text-sm font-bold ${GRADE_CLS[grade]}`}>
+    <span data-testid={testId} className={`inline-flex h-7 min-w-7 items-center px-1 justify-center rounded-lg border font-mono text-sm font-bold ${GRADE_CLS[grade]}`}>
       {grade}
     </span>
   ) : (
