@@ -89,7 +89,13 @@ export const ReviewSheet = ({ id, onClose, onChanged }) => {
   return (
     <Sheet open={!!id} onOpenChange={(o) => !o && onClose()}>
       <SheetContent data-testid="sheet-review" className="w-full overflow-y-auto bg-[#FDFBF7] sm:max-w-xl">
-        {!s ? <Loader2 className="mx-auto mt-20 h-6 w-6 animate-spin text-amber-600" /> : (
+        {!s ? (
+          <>
+            <SheetTitle className="sr-only">Memuat</SheetTitle>
+            <SheetDescription className="sr-only">Memuat data pengumpulan</SheetDescription>
+            <Loader2 className="mx-auto mt-20 h-6 w-6 animate-spin text-amber-600" />
+          </>
+        ) : (
           <div className="space-y-5">
             <SheetHeader className="text-left">
               <div className="flex items-center gap-2"><PlatformBadge platform={s.platform} /><StatusPill status={s.status} /></div>

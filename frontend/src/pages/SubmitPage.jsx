@@ -99,7 +99,7 @@ export default function SubmitPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="absen">{t.absen}</Label>
-                  <Input id="absen" type="number" min={1} max={60} data-testid="input-attendance-number" className="h-11 rounded-xl font-mono" placeholder="1–40" value={form.attendance_number} onChange={set("attendance_number")} />
+                  <Input id="absen" type="number" min={1} max={60} data-testid="input-attendance-number" className="h-11 rounded-xl font-mono" placeholder="1–60" value={form.attendance_number} onChange={set("attendance_number")} />
                 </div>
               </div>
               <div className="space-y-2">
